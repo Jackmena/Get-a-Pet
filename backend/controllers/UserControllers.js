@@ -1,5 +1,6 @@
 const createUserToken = require("../helpers/create-user-token");
 const getToken = require("../helpers/get-token");
+const getUserByToken = require("../helpers/get-user-by-token");
 const User = require("../models/User");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
@@ -126,6 +127,66 @@ module.exports = class UserController {
   }
 
   static async editUser(req, res) {
-    res.status(200).json({ message: "Deu certo update!" });
+    const id = req.params.id;
+
+    const token = getToken(req);
+    const user = await getUserByToken(token);
+
+    const { name, email, phone, password, confirmpassword } = req.body;
+
+    let image = "";
+
+    // validations
+    if (!name) {
+      res.status(422).json({ message: "O nome é obrigatório!" });
+      return;
+    }
+
+    user.name = name;
+
+    if (!email) {
+      res.status(422).json({ message: "O email é obrigatório!" });
+      return;
+    }
+
+    // check if email has already taken
+    const userExists = await User.findOne({ email: email });
+
+    if (user.email !== email && userExists) {
+      res.status(422).json({ message: "Por favor, utilize outro email!" });
+      return;
+    }
+
+    user.email = email;
+
+    if (!phone) {
+      res.status(422).json({ message: "O telefone é obreigatório!" });
+      return;
+    }
+
+    user.phone = phone;
+
+    if (password !== confirmpassword) {
+      res.status(422).json({ message: "Senhas diferentes!" });
+      return;
+    } else if (password === confirmpassword && password) {
+      // create a password
+      const salt = await bcrypt.genSalt(12);
+      const passwordHash = await bcrypt.hash(password, salt);
+
+      user.password = passwordHash;
+    }
+
+    try {
+      await User.findOneAndUpdate(
+        { _id: user._id },
+        { $set: user },
+        { new: true }
+      );
+      res.status(200).json({ message: "Usuário atualizado com sucesso!" });
+    } catch (error) {
+      res.status(500).json({ message: err });
+      return;
+    }
   }
 };
