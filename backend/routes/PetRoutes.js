@@ -5,6 +5,7 @@ const PetController = require("../controllers/PetControllers");
 // middlewares
 const verifyToken = require("../helpers/verify-token");
 const { imageUpload } = require("../helpers/image-upload");
+const Pet = require("../models/Pet");
 
 router.post(
   "/create",
@@ -24,5 +25,6 @@ router.patch(
   imageUpload.array("images"),
   PetController.updatePet
 );
+router.patch("/schedule/:id", verifyToken, PetController.schedule);
 
 module.exports = router;
